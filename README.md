@@ -1,128 +1,146 @@
-# SSH MCP Server
+# Claude SSH Server
 
-[![NPM Version](https://img.shields.io/npm/v/ssh-mcp)](https://www.npmjs.com/package/ssh-mcp)
-[![Downloads](https://img.shields.io/npm/dm/ssh-mcp)](https://www.npmjs.com/package/ssh-mcp)
-[![Node Version](https://img.shields.io/node/v/ssh-mcp)](https://nodejs.org/)
-[![License](https://img.shields.io/github/license/tufantunc/ssh-mcp)](./LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/tufantunc/ssh-mcp?style=social)](https://github.com/tufantunc/ssh-mcp/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/tufantunc/ssh-mcp?style=social)](https://github.com/tufantunc/ssh-mcp/forks)
-[![Build Status](https://github.com/tufantunc/ssh-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/tufantunc/ssh-mcp/actions)
-[![GitHub issues](https://img.shields.io/github/issues/tufantunc/ssh-mcp)](https://github.com/tufantunc/ssh-mcp/issues)
+**Direct SSH connections with IP/username/password - no config required!**
 
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/tufantunc/ssh-mcp)](https://archestra.ai/mcp-catalog/tufantunc__ssh-mcp)
+This MCP server enables Claude to connect to any SSH server on-demand using just IP address, username, and password. No SSH config files needed!
 
-**SSH MCP Server** is a local Model Context Protocol (MCP) server that exposes SSH control for Linux and Windows systems, enabling LLMs and other MCP clients to execute shell commands securely via SSH.
+## 🚀 Key Feature
 
-## Contents
+Unlike traditional SSH MCP servers that require pre-configured hosts in `~/.ssh/config`, Claude SSH Server supports **ad-hoc connections** with credentials passed directly in each request.
 
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Installation](#installation)
-- [Client Setup](#client-setup)
-- [Testing](#testing)
-- [Disclaimer](#disclaimer)
-- [Support](#support)
+## 📦 Installation
 
-## Quick Start
+### NPM Global Install
+```bash
+npm install -g claude-ssh-server
+```
 
-- [Install](#installation) SSH MCP Server
-- [Configure](#configuration) SSH MCP Server
-- [Set up](#client-setup) your MCP Client (e.g. Claude Desktop, Cursor, etc)
-- Execute remote shell commands on your Linux or Windows server via natural language
+### Local Install
+```bash
+cd claude-ssh-server
+npm install
+npm run build
+```
 
-## Features
+## 🔧 Configuration
 
-- MCP-compliant server exposing SSH capabilities
-- Execute shell commands on remote Linux and Windows systems
-- Secure authentication via password or SSH key
-- Built with TypeScript and the official MCP SDK
-- **Configurable timeout protection** with automatic process abortion
-- **Graceful timeout handling** - attempts to kill hanging processes before closing connections
+### Claude Desktop
 
-### Tools
+Add to your `claude_desktop_config.json`:
 
-- `exec`: Execute a shell command on the remote server
-  - **Parameters:**
-    - `command` (required): Shell command to execute on the remote SSH server
-  - **Timeout Configuration:**
-    - Timeout is configured via command line argument `--timeout` (in milliseconds)
-    - Default timeout: 60000ms (1 minute)
-    - When a command times out, the server automatically attempts to abort the running process before closing the connection
-  - **Max Command Length Configuration:**
-    - Max command characters are configured via `--maxChars`
-    - Default: `1000`
-    - No-limit mode: set `--maxChars=none` or any `<= 0` value (e.g. `--maxChars=0`)
-
-## Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/tufantunc/ssh-mcp.git
-   cd ssh-mcp
-   ```
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-## Client Setup
-
-You can configure Claude Desktop to use this MCP Server.
-
-**Required Parameters:**
-- `host`: Hostname or IP of the Linux or Windows server
-- `user`: SSH username
-
-**Optional Parameters:**
-- `port`: SSH port (default: 22)
-- `password`: SSH password (or use `key` for key-based auth)
-- `key`: Path to private SSH key
-- `timeout`: Command execution timeout in milliseconds (default: 60000ms = 1 minute)
-- `maxChars`: Maximum allowed characters for the `command` input (default: 1000). Use `none` or `0` to disable the limit.
-
-
-```commandline
+```json
 {
-    "mcpServers": {
-        "ssh-mcp": {
-            "command": "npx",
-            "args": [
-                "ssh-mcp",
-                "-y",
-                "--",
-                "--host=1.2.3.4",
-                "--port=22",
-                "--user=root",
-                "--password=pass",
-                "--key=path/to/key",
-                "--timeout=30000",
-                "--maxChars=none"
-            ]
-        }
+  "mcpServers": {
+    "claude-ssh": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "claude-ssh-server"
+      ]
     }
+  }
 }
 ```
 
-## Testing
+## 🎯 Usage
 
-You can use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) for visual debugging of this MCP Server.
+### Direct Connection (New!)
 
-```sh
-npm run inspect
+Connect to any SSH server without pre-configuration:
+
+```typescript
+{
+  "tool": "direct_exec",
+  "host": "10.100.100.53",
+  "username": "mtusa",
+  "password": "your-password",
+  "command": "ls -la",
+  "port": 22,  // optional, defaults to 22
+  "timeout": 60000  // optional, defaults to 60000ms
+}
 ```
 
-## Disclaimer
+### Traditional CLI Mode
 
-SSH MCP Server is provided under the [MIT License](./LICENSE). Use at your own risk. This project is not affiliated with or endorsed by any SSH or MCP provider.
+You can still use the traditional mode with CLI arguments:
 
-## Contributing
+```bash
+claude-ssh-server --host=10.100.100.53 --user=mtusa --password=mypass
+```
 
-We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTING.md) for more information.
+Then use the `exec` tool (credentials from CLI args).
 
-## Code of Conduct
+## 🛠️ Available Tools
 
-This project follows a [Code of Conduct](./CODE_OF_CONDUCT.md) to ensure a welcoming environment for everyone.
+### `direct_exec` (Recommended)
+Execute commands with credentials provided per-request:
+- **host**: SSH server IP or hostname
+- **username**: SSH username  
+- **password**: SSH password (optional if using privateKey)
+- **privateKey**: SSH private key content (optional if using password)
+- **command**: Command to execute
+- **port**: SSH port (default: 22)
+- **timeout**: Timeout in ms (default: 60000)
 
-## Support
+### `exec` (Legacy)
+Execute commands using CLI-configured credentials:
+- **command**: Command to execute
 
-If you find SSH MCP Server helpful, consider starring the repository or contributing! Pull requests and feedback are welcome. 
+## 🔒 Security Notes
+
+- Credentials are passed per-request and not stored
+- Supports both password and private key authentication
+- Connection timeout protection (default 60s)
+- Command sanitization and validation
+- No persistent connections or credential storage
+
+## 📝 Examples
+
+### Check disk space on remote server
+```json
+{
+  "tool": "direct_exec",
+  "host": "192.168.1.100",
+  "username": "admin",
+  "password": "secure-password",
+  "command": "df -h"
+}
+```
+
+### Run multiple commands
+```json
+{
+  "tool": "direct_exec",
+  "host": "server.example.com",
+  "username": "devops",
+  "password": "password123",
+  "command": "cd /var/log && tail -n 50 syslog"
+}
+```
+
+### Using SSH key
+```json
+{
+  "tool": "direct_exec",
+  "host": "prod-server",
+  "username": "deploy",
+  "privateKey": "-----BEGIN RSA PRIVATE KEY-----\n...",
+  "command": "systemctl status nginx"
+}
+```
+
+## 🤝 Credits
+
+Forked from [tufantunc/ssh-mcp](https://github.com/tufantunc/ssh-mcp)
+
+Modified by Jason Smith to add direct connection support for Claude Desktop integration.
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🐛 Issues & Contributions
+
+Report issues: https://github.com/jasondsmith72/claude-ssh-server/issues
+
+Pull requests welcome!

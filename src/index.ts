@@ -56,7 +56,7 @@ function validateConfig(config: Record<string, string>) {
   }
 }
 
-if (isCliEnabled) {
+if (isCliEnabled && HOST) {
   validateConfig(argvConfig);
 }
 
@@ -89,23 +89,28 @@ export function escapeCommandForShell(command: string): string {
 }
 
 const server = new McpServer({
-  name: 'SSH MCP Server',
-  version: '1.0.9',
+  name: 'Claude SSH Server',
+  version: '1.0.0',
   capabilities: {
     resources: {},
     tools: {},
   },
 });
 
+// Original exec tool for backward compatibility with CLI arguments
 server.tool(
   "exec",
-  "Execute a shell command on the remote SSH server and return the output.",
+  "Execute a shell command on the remote SSH server and return the output. Uses connection details from CLI arguments.",
   {
     command: z.string().describe("Shell command to execute on the remote SSH server"),
   },
   async ({ command }) => {
     // Sanitize command input
     const sanitizedCommand = sanitizeCommand(command);
+
+    if (!HOST || !USER) {
+      throw new McpError(ErrorCode.InvalidParams, 'Host and user must be configured via CLI arguments for exec tool');
+    }
 
     const sshConfig: any = {
       host: HOST,
@@ -129,7 +134,56 @@ server.tool(
   }
 );
 
-export async function execSshCommand(sshConfig: any, command: string): Promise<{ [x: string]: unknown; content: ({ [x: string]: unknown; type: "text"; text: string; } | { [x: string]: unknown; type: "image"; data: string; mimeType: string; } | { [x: string]: unknown; type: "audio"; data: string; mimeType: string; } | { [x: string]: unknown; type: "resource"; resource: any; })[] }> {
+// New direct_exec tool that accepts connection details as parameters
+server.tool(
+  "direct_exec",
+  "Execute a shell command on any SSH server by providing connection details directly. This tool allows ad-hoc connections without pre-configuration.",
+  {
+    host: z.string().describe("SSH server hostname or IP address"),
+    port: z.number().optional().default(22).describe("SSH server port (default: 22)"),
+    username: z.string().describe("SSH username"),
+    password: z.string().optional().describe("SSH password (if using password authentication)"),
+    privateKey: z.string().optional().describe("SSH private key content (if using key authentication)"),
+    command: z.string().describe("Shell command to execute on the remote SSH server"),
+    timeout: z.number().optional().default(60000).describe("Command timeout in milliseconds (default: 60000)"),
+  },
+  async ({ host, port, username, password, privateKey, command, timeout }) => {
+    // Sanitize command input
+    const sanitizedCommand = sanitizeCommand(command);
+
+    // Validate that we have at least one authentication method
+    if (!password && !privateKey) {
+      throw new McpError(ErrorCode.InvalidParams, 'Either password or privateKey must be provided');
+    }
+
+    const sshConfig: any = {
+      host,
+      port: port || 22,
+      username,
+    };
+
+    try {
+      if (password) {
+        sshConfig.password = password;
+      } else if (privateKey) {
+        sshConfig.privateKey = privateKey;
+      }
+      
+      const result = await execSshCommand(sshConfig, sanitizedCommand, timeout);
+      return result;
+    } catch (err: any) {
+      // Wrap unexpected errors
+      if (err instanceof McpError) throw err;
+      throw new McpError(ErrorCode.InternalError, `Unexpected error: ${err?.message || err}`);
+    }
+  }
+);
+
+export async function execSshCommand(
+  sshConfig: any, 
+  command: string, 
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<{ [x: string]: unknown; content: ({ [x: string]: unknown; type: "text"; text: string; } | { [x: string]: unknown; type: "image"; data: string; mimeType: string; } | { [x: string]: unknown; type: "audio"; data: string; mimeType: string; } | { [x: string]: unknown; type: "resource"; resource: any; })[] }> {
   return new Promise((resolve, reject) => {
     const conn = new SSHClient();
     let timeoutId: NodeJS.Timeout;
@@ -156,9 +210,9 @@ export async function execSshCommand(sshConfig: any, command: string): Promise<{
             conn.end();
           }
         });
-        reject(new McpError(ErrorCode.InternalError, `Command execution timed out after ${DEFAULT_TIMEOUT}ms`));
+        reject(new McpError(ErrorCode.InternalError, `Command execution timed out after ${timeout}ms`));
       }
-    }, DEFAULT_TIMEOUT);
+    }, timeout);
     
     conn.on('ready', () => {
       conn.exec(command, (err, stream) => {
@@ -212,7 +266,7 @@ export async function execSshCommand(sshConfig: any, command: string): Promise<{
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("SSH MCP Server running on stdio");
+  console.error("Claude SSH Server running on stdio");
 }
 
 if (process.env.SSH_MCP_DISABLE_MAIN !== '1') {

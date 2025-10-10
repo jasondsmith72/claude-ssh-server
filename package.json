@@ -1,11 +1,11 @@
 {
-  "name": "ssh-mcp",
+  "name": "claude-ssh-server",
   "license": "MIT",
-  "version": "1.1.0",
-  "description": "MCP server exposing SSH control for Linux and Windows systems via Model Context Protocol.",
+  "version": "1.0.0",
+  "description": "MCP server enabling direct SSH connections with IP/username/password - no config required. Fork of ssh-mcp with ad-hoc connection support.",
   "type": "module",
   "bin": {
-    "ssh-mcp": "build/index.js"
+    "claude-ssh-server": "build/index.js"
   },
   "scripts": {
     "prepare": "npm run build",
@@ -34,13 +34,13 @@
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
-  "homepage": "https://github.com/tufantunc/ssh-mcp#readme",
+  "homepage": "https://github.com/jasondsmith72/claude-ssh-server#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tufantunc/ssh-mcp.git"
+    "url": "https://github.com/jasondsmith72/claude-ssh-server.git"
   },
   "bugs": {
-    "url": "https://github.com/tufantunc/ssh-mcp/issues"
+    "url": "https://github.com/jasondsmith72/claude-ssh-server/issues"
   },
   "keywords": [
     "ssh",
@@ -52,9 +52,13 @@
     "automation",
     "remote",
     "cli",
-    "typescript"
+    "typescript",
+    "direct-connection",
+    "ad-hoc",
+    "no-config",
+    "claude"
   ],
-  "author": "tufantunc",
+  "author": "Jason Smith (jasondsmith72)",
   "engines": {
     "node": ">=18"
   }
