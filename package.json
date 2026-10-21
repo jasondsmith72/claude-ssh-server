@@ -19,7 +19,7 @@
     "build"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "ssh2": "^1.17.0",
     "zod": "3.23.8"
   },
