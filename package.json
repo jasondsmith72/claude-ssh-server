@@ -32,7 +32,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.5"
   },
   "homepage": "https://github.com/jasondsmith72/claude-ssh-server#readme",
   "repository": {
